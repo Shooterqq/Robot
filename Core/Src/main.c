@@ -48,6 +48,9 @@
 /* USER CODE BEGIN PV */
 struct us_sensor_str distance_sensor;
 TIM_OC_InitTypeDef sConfigOC;
+
+uint8_t znak;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -98,6 +101,7 @@ int main(void)
   MX_TIM8_Init();
   MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
+  HAL_UART_Receive_IT(&huart2, &znak, 1);
 
   HAL_TIM_Base_Start_IT(&htim1);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -123,21 +127,6 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-//	  do{
-//	  	  sConfigOC.OCMode = TIM_OCMODE_PWM2;
-//	  	  sConfigOC.Pulse = 500;
-//	  	  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-//	  	  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-//	  	  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-//	  	  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-//	  	  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-//	  	  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK){
-//	  	    Error_Handler();
-//	  	  }
-//	  	  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK){
-//	  	      Error_Handler();
-//	  	  }
-//	  	}while(distance_sensor.distance_cm < 15);
   }
   /* USER CODE END 3 */
 }
@@ -197,7 +186,45 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(huart->Instance == USART2)
+	{
+		if(znak == 'e')
+		{	  TIM_OC_InitTypeDef sConfigOC = {0};
 
+		  sConfigOC.OCMode = TIM_OCMODE_PWM2;
+		  sConfigOC.Pulse = 920;
+		  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+		  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+		  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+		  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+
+		  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+		  {
+		    Error_Handler();
+		  }
+
+		  // Konfiguracja kanału 1 Timer2
+		  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+		  {
+		      Error_Handler();
+		  }
+
+		  // TODO Zrobic zwiekszanie i zmniejszanie predkosci z PIDem
+
+		  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+		  {
+		      Error_Handler();
+		  }
+
+		  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+		  {
+		      Error_Handler();
+		  }
+		}
+	}
+}
 
 /* USER CODE END 4 */
 

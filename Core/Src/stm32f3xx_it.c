@@ -67,6 +67,7 @@ uint8_t directionChanged = 0;
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
+extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -274,6 +275,20 @@ void TIM1_UP_TIM16_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles USART2 global interrupt / USART2 wake-up interrupt through EXTI line 26.
+  */
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+
+  /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
   * @brief This function handles EXTI line[15:10] interrupts.
   */
 void EXTI15_10_IRQHandler(void)
@@ -315,7 +330,7 @@ void EXTI15_10_IRQHandler(void)
 	  TIM_OC_InitTypeDef sConfigOC = {0};
 
 	  sConfigOC.OCMode = TIM_OCMODE_PWM2;
-	  sConfigOC.Pulse = 920;
+	  sConfigOC.Pulse = 500;
 	  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
 	  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
 	  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -359,8 +374,8 @@ void EXTI15_10_IRQHandler(void)
 void TIM8_CC_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM8_CC_IRQn 0 */
-	echo
-	hc_sr04_convert_us_to_cm(distance_us)
+	distance_sensor.distance_cm = HAL_TIM_ReadCapturedValue(&htim8, TIM_CHANNEL_2);
+	distance_sensor.distance_cm = hc_sr04_convert_us_to_cm(distance_sensor.distance_cm);
   /* USER CODE END TIM8_CC_IRQn 0 */
   HAL_TIM_IRQHandler(&htim8);
   /* USER CODE BEGIN TIM8_CC_IRQn 1 */
