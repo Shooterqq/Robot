@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "hc_sr_04.h"
 #include "tim.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,10 +48,9 @@
 
 /* USER CODE BEGIN PV */
 struct us_sensor_str distance_sensor;
-TIM_OC_InitTypeDef sConfigOC;
-
-uint8_t znak;
-
+TIM_OC_InitTypeDef sConfigOC;			// Chyba do usuniecia
+uint8_t RxData[5];
+uint8_t firstRunFlag = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -61,7 +61,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t value = 0;
+
 /* USER CODE END 0 */
 
 /**
@@ -100,32 +100,22 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM8_Init();
   MX_TIM15_Init();
+  MX_UART4_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart2, &znak, 1);
 
-  HAL_TIM_Base_Start_IT(&htim1);
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-  HAL_TIM_OC_Start(&htim1, TIM_CHANNEL_2);
-
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-  HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_2);
-
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-  HAL_TIM_OC_Start(&htim3, TIM_CHANNEL_2);
-
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
-
-  hc_sr04_init(&distance_sensor, &htim8, &htim15, TIM_CHANNEL_1);
-
+//  HAL_UART_Receive_IT(&huart2, (uint8_t*)&RxData, 5);
+  HAL_UART_Receive_IT(&huart4, (uint8_t*)&RxData, 5);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
   while (1)
   {
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
+
+
 
   }
   /* USER CODE END 3 */
@@ -169,10 +159,12 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_TIM1
-                              |RCC_PERIPHCLK_TIM15|RCC_PERIPHCLK_TIM8
-                              |RCC_PERIPHCLK_TIM2|RCC_PERIPHCLK_TIM34;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_UART4
+                              |RCC_PERIPHCLK_TIM1|RCC_PERIPHCLK_TIM15
+                              |RCC_PERIPHCLK_TIM8|RCC_PERIPHCLK_TIM2
+                              |RCC_PERIPHCLK_TIM34;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+  PeriphClkInit.Uart4ClockSelection = RCC_UART4CLKSOURCE_PCLK1;
   PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
   PeriphClkInit.Tim15ClockSelection = RCC_TIM15CLK_HCLK;
   PeriphClkInit.Tim8ClockSelection = RCC_TIM8CLK_HCLK;
@@ -188,43 +180,47 @@ void SystemClock_Config(void)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	if(huart->Instance == USART2)
-	{
-		if(znak == 'e')
-		{	  TIM_OC_InitTypeDef sConfigOC = {0};
+    if (huart->Instance == UART4)
+    {
+        if (strcmp((char*)RxData, "START") == 0)
+        {
+        	if(!firstRunFlag)
+        	{
+        		HAL_TIM_Base_Start_IT(&htim1);
+            	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+            	HAL_TIM_OC_Start(&htim1, TIM_CHANNEL_2);
 
-		  sConfigOC.OCMode = TIM_OCMODE_PWM2;
-		  sConfigOC.Pulse = 920;
-		  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-		  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-		  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-		  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+            	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+            	HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_2);
 
-		  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-		  {
-		    Error_Handler();
-		  }
+            	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+            	HAL_TIM_OC_Start(&htim3, TIM_CHANNEL_2);
 
-		  // Konfiguracja kanału 1 Timer2
-		  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-		  {
-		      Error_Handler();
-		  }
+            	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 
-		  // TODO Zrobic zwiekszanie i zmniejszanie predkosci z PIDem
+            	hc_sr04_init(&distance_sensor, &htim8, &htim15, TIM_CHANNEL_1);
 
-		  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-		  {
-		      Error_Handler();
-		  }
+            	firstRunFlag = 1;
+        	}
 
-		  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-		  {
-		      Error_Handler();
-		  }
-		}
-	}
+        	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 500);
+        	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 500);
+        	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 500);
+        	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 500);
+
+        }
+        else if (strcmp((char*)RxData, "STOPY") == 0)
+        {
+            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+            __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
+            __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+            __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 0);
+        }
+        HAL_UART_Receive_IT(&huart4, (uint8_t*)&RxData, 5);
+    }
 }
+
+
 
 /* USER CODE END 4 */
 

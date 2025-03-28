@@ -24,6 +24,8 @@
 /* USER CODE BEGIN Includes */
 #include "stdint.h"
 #include "hc_sr_04.h"
+#include "tim.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,16 +59,21 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim15;
+extern TIM_HandleTypeDef htim8;
 
 extern struct us_sensor_str distance_sensor;
 uint8_t direction = 0;
 uint8_t directionChanged = 0;
+int dupa = 0;
+extern uint8_t RxData[7];
 
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
+extern UART_HandleTypeDef huart4;
 extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
@@ -216,57 +223,41 @@ void SysTick_Handler(void)
 void TIM1_UP_TIM16_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_UP_TIM16_IRQn 0 */
-	  if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
+	if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
 	  {
 	    __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
 
-		// Sprawdzanie odległości i zmiana kierunku silnika
-		if ( (distance_sensor.distance_cm < 15) && directionChanged)
-		{
-			TIM_OC_InitTypeDef sConfigOC = {0};
+		// Sprawdzanie odległości i zmiana kierunku pracy silnika
+		if ( (distance_sensor.distance_cm < 15) && directionChanged){
 
-			  sConfigOC.OCMode = TIM_OCMODE_PWM2;
-			  sConfigOC.Pulse = 500;
-			  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-			  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-			  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-			  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-			  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+			// Wyzerowanie  bitów
+			TIM1->CCMR1 &= ~(TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
+			TIM3->CCMR1 &= ~(TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
 
-			  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-			  {
-			    Error_Handler();
-			  }
+			TIM1->CCMR1 |= (TIM_OCMODE_PWM1);  //Włączenie trybu PWM1
+			TIM3->CCMR1 |= (TIM_OCMODE_PWM1);  //Włączenie trybu PWM1
 
-			  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-			  {
-			      Error_Handler();
-			  }
-		}else if(distance_sensor.distance_cm > 15)
-		{
-			TIM_OC_InitTypeDef sConfigOC = {0};
+		}else if(distance_sensor.distance_cm > 15){
 
-				  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-				  sConfigOC.Pulse = 500;
-				  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-				  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-				  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-				  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-				  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+			TIM1->CCMR1 &= ~(TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
+			TIM3->CCMR1 &= ~(TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
 
-				  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-				  {
-				    Error_Handler();
-				  }
-
-				  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-				  {
-				      Error_Handler();
-				  }
+			TIM1->CCMR1 |= (TIM_OCMODE_PWM2);  //Włączenie trybu PWM2
+			TIM3->CCMR1 |= (TIM_OCMODE_PWM2);  //Włączenie trybu PWM2
 
 			directionChanged = 1;
 		}
 	}
+
+//	dupa++;
+//	if(dupa == 5)
+//	{
+//	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 600);		// inwersja
+//	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 600);		// ok
+//	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 600);		// inwersja
+//	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 600);		// ok
+//	}
+
   /* USER CODE END TIM1_UP_TIM16_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
   /* USER CODE BEGIN TIM1_UP_TIM16_IRQn 1 */
@@ -280,6 +271,11 @@ void TIM1_UP_TIM16_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
+//    if(huart->Instance == USART2)
+//    {
+//
+//    }
+//       HAL_UART_Receive_IT(&huart2, (uint8_t*)&RxData, sizeof(RxData));
 
   /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart2);
@@ -302,62 +298,24 @@ void EXTI15_10_IRQHandler(void)
 	  if(direction % 2 == 0)
 	  {
 		  direction++;
-	  TIM_OC_InitTypeDef sConfigOC = {0};
 
-	  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-	  sConfigOC.Pulse = 500;
-	  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-	  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-	  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-	  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-	  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+			// Wyzerowanie  bitów
+			TIM1->CCMR1 &= ~(TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
+			TIM3->CCMR1 &= ~(TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
 
-	  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-	  {
-	    Error_Handler();
-	  }
-
-	  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-	  {
-	      Error_Handler();
-	  }
+			TIM1->CCMR1 |= (TIM_OCMODE_PWM1);  //Włączenie trybu PWM1
+			TIM3->CCMR1 |= (TIM_OCMODE_PWM1);  //Włączenie trybu PWM1
 
 	}
 	  else
 	  {
 		  direction++;
 
-	  TIM_OC_InitTypeDef sConfigOC = {0};
+			TIM1->CCMR1 &= ~(TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
+			TIM3->CCMR1 &= ~(TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
 
-	  sConfigOC.OCMode = TIM_OCMODE_PWM2;
-	  sConfigOC.Pulse = 500;
-	  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-	  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-	  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-	  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-
-	  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-	  {
-	    Error_Handler();
-	  }
-
-	  // Konfiguracja kanału 1 Timer2
-	  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-	  {
-	      Error_Handler();
-	  }
-
-	  // TODO Zrobic zwiekszanie i zmniejszanie predkosci z PIDem
-
-	  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-	  {
-	      Error_Handler();
-	  }
-
-	  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-	  {
-	      Error_Handler();
-	  }
+			TIM1->CCMR1 |= (TIM_OCMODE_PWM2);  //Włączenie trybu PWM2
+			TIM3->CCMR1 |= (TIM_OCMODE_PWM2);  //Włączenie trybu PWM2
 	  }
 
 	}
@@ -381,6 +339,20 @@ void TIM8_CC_IRQHandler(void)
   /* USER CODE BEGIN TIM8_CC_IRQn 1 */
 
   /* USER CODE END TIM8_CC_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UART4 global interrupt / UART4 wake-up interrupt through EXTI line 34.
+  */
+void UART4_IRQHandler(void)
+{
+  /* USER CODE BEGIN UART4_IRQn 0 */
+
+  /* USER CODE END UART4_IRQn 0 */
+  HAL_UART_IRQHandler(&huart4);
+  /* USER CODE BEGIN UART4_IRQn 1 */
+
+  /* USER CODE END UART4_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
