@@ -1,0 +1,21 @@
+# Ignore build directories
+build/
+Debug/
+Release/
+
+# Ignore compilation output files
+*.o
+*.elf
+*.bin
+*.map
+*.axf
+*.d
+*.srec
+
+# Ignore log and temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*.svd
